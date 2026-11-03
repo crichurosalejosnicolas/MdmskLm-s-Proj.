@@ -1,0 +1,55 @@
+const express = require('express');
+const cors = require('cors');
+const fetch = require('node-fetch');
+const path = require('path');
+
+const app = express();
+app.use(cors());
+app.use(express.json());
+app.use(express.static(__dirname));
+
+const CLIENT_ID = process.env.PAYPAL_CLIENT_ID || 'YOUR_CLIENT_ID';
+const SECRET = process.env.PAYPAL_SECRET || 'YOUR_SECRET';
+const BASE_URL = 'https://api-m.sandbox.paypal.com';
+
+async function getAccessToken() {
+  const auth = Buffer.from(CLIENT_ID + ':' + SECRET).toString('base64');
+  const res = await fetch(`${BASE_URL}/v1/oauth2/token`, {
+    method: 'POST',
+    headers: { 'Authorization': `Basic ${auth}`, 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: 'grant_type=client_credentials'
+  });
+  const data = await res.json();
+  return data.access_token;
+}
+
+app.post('/create-order', async (req, res) => {
+  const token = await getAccessToken();
+  const response = await fetch(`${BASE_URL}/v2/checkout/orders`, {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      intent: 'CAPTURE',
+      purchase_units: [{ amount: { currency_code: 'PHP', value: '500.00' } }]
+    })
+  });
+  const order = await response.json();
+  res.json(order);
+});
+
+app.post('/capture-order', async (req, res) => {
+  const { orderID } = req.body;
+  const token = await getAccessToken();
+  const response = await fetch(`${BASE_URL}/v2/checkout/orders/${orderID}/capture`, {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
+  });
+  const data = await response.json();
+  console.log('Manila Auto-Confirm Rule: PAYMENT.CAPTURE.COMPLETED -> PAID');
+  res.json(data);
+});
+
+app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`MdmskLm's Proj running in Manila PH on port ${PORT}`));
