@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>MdmskLm's Proj - PayPal Manila PH</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="https://www.paypal.com/sdk/js?client-id=YOUR_CLIENT_ID&currency=PHP"></script>
+<style>
+body{font-family:Arial;text-align:center;padding:20px;background:#f5f7fa}
+.card{background:white;max-width:400px;margin:auto;padding:30px;border-radius:15px;box-shadow:0 4px 20px rgba(0,0,0,0.1)}
+.price{font-size:28px;color:#003087;font-weight:bold;margin:15px 0}
+.badge{background:#0070ba;color:white;padding:5px 15px;border-radius:20px;font-size:12px}
+</style>
+</head>
+<body>
+<div class="card">
+<span class="badge">MANILA, PHILIPPINES</span>
+<h2>MdmskLm's Proj</h2>
+<h3>Merch Kit - Modular Learning Kit</h3>
+<div class="price">₱500.00 PHP</div>
+<p>Pay in 2 clicks with PayPal - Built for Manila MSMEs</p>
+<div id="paypal-button-container"></div>
+<div id="result"></div>
+</div>
+
+<script>
+paypal.Buttons({
+  createOrder: function() {
+    return fetch('/create-order', { method: 'POST' })
+      .then(res => res.json())
+      .then(data => data.id);
+  },
+  onApprove: function(data) {
+    return fetch('/capture-order', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ orderID: data.orderID })
+    })
+    .then(res => res.json())
+    .then(details => {
+      document.getElementById('result').innerHTML = 
+        `<h3 style="color:green">✅ Success! Paid by ${details.payer.name.given_name}</h3>
+         <p>Order: ${details.id}</p>
+         <p>Status: PAID (Auto-Confirmed by Manila Rule)</p>`;
+    });
+  }
+}).render('#paypal-button-container');
+</script>
+</body>
+</html>
